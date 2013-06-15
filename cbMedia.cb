@@ -1,0 +1,201 @@
+Function cbMedia_LoadRaw24BitBMP(file$)
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+		For i = 1 To v
+			name$ = ReadString(f)
+			offset = ReadInt(f)
+			size = ReadInt(f)
+			If (Lower(name) = Lower(file))
+				Exit
+			EndIf
+		Next i
+		SeekFile f, offset
+		b = ReadByte(f)
+		m = ReadByte(f)
+		If (b <> 66 Or m <> 77) Then
+			MakeError file + " is Not valid 24bit bmp file"
+		EndIf
+		s = ReadInt(f)
+		SeekFile f, FileOffset(f) + 4
+		offset = ReadInt(f)
+		headerLeft = ReadInt(f)
+		
+		w = ReadInt(f)
+		h = ReadInt(f)
+		
+		planes = ReadShort(f)
+		If ReadShort(f) <> 24 Then
+			MakeError file + " is Not valid 24bit bmp file"
+		EndIf
+		If ReadInt(f) <> 0 Then
+			MakeError file + " is Not valid 24bit bmp file"
+		EndIf
+		rawsize = ReadInt(f)
+		SeekFile f, FileOffset(f) + 8
+		If ReadInt(f) <> 0 Then
+			MakeError file + " is Not valid 24bit bmp file"
+		EndIf
+		If ReadInt(f) <> 0 Then
+			MakeError file + " is Not valid 24bit bmp file"
+		EndIf
+		
+		i = MakeImage(w, h)
+		pad = w Mod 4
+		Lock Image(i)
+		For y = h To 1 Step -1
+			For x = 1 To w
+				b = ReadByte(f)
+				g = ReadByte(f)
+				r = ReadByte(f)
+				
+				c = 255 Shl 24 + r Shl 16 + g Shl 8 + b
+				
+				PutPixel2 x - 1, y - 1, c, Image(i)
+			Next x
+			If pad Then
+				For q = 1 To pad
+					a = ReadByte(f)
+				Next q	
+			EndIf
+		Next y
+		Unlock Image(i)
+	CloseFile f
+	Return i
+EndFunction
+
+Function cbMedia_ExtractAll()
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+		For i = 1 To v
+			name$ = ReadString(f)
+			offset = ReadInt(f)
+			size = ReadInt(f)
+			toff = FileOffset(f)
+			SeekFile f, offset
+			o = OpenTowrite(name)
+				For a = 1 To size / 4
+					WriteInt o, ReadInt(f)
+				Next a
+				For a = 1 To size Mod 4
+					WriteByte o, ReadInt(f)
+				Next a
+			CloseFile o
+			SeekFile f, toff
+		Next i
+	CloseFile f
+	Return i
+EndFunction
+
+Function cbMedia_Extract(file$)
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+		For i = 1 To v
+			name$ = ReadString(f)
+			offset = ReadInt(f)
+			size = ReadInt(f)
+			If (Lower(name) = Lower(file))
+				Exit
+			EndIf
+		Next i
+		SeekFile f, offset
+		o = OpenToWrite(file)
+			For i = 1 To size / 4
+				WriteInt o, ReadInt(f)
+			Next i
+			For i = 1 To size Mod 4
+				WriteByte o, ReadByte(f)
+			Next i
+		CloseFile o
+	CloseFile f
+EndFunction
+
+Function cbMedia_GetCount()
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+	CloseFile f
+	Return v
+EndFunction
+
+Function cbMedia_GetFilesize(file$)
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+		For i = 1 To v
+			name$ = ReadString(f)
+			offset = ReadInt(f)
+			size = ReadInt(f)
+			If (Lower(name) = Lower(file))
+				Exit
+			EndIf
+		Next i
+	CloseFile f
+	Return size
+EndFunction
+
+Function cbMedia_GetFileoffset(file$)
+	n$ = GetEXEName()
+	f = OpenToRead(n)
+		SeekFile f, FileSize(n) - 4
+		SeekFile f, FileSize(n) - ReadInt(f) - 8
+		p = ReadInt(f)
+		If (p = 0)
+			MakeError "No media in exe!"
+		Else
+			SeekFile f, p
+		EndIf
+		v = ReadInt(f)
+		For i = 1 To v
+			name$ = ReadString(f)
+			offset = ReadInt(f)
+			size = ReadInt(f)
+			If (Lower(name) = Lower(file))
+				Exit
+			EndIf
+		Next i
+	CloseFile f
+	Return offset
+EndFunction

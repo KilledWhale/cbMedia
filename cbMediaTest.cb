@@ -1,0 +1,10 @@
+Include "cbMedia.cb"
+
+cbMedia_Extract("tileset.bmp")
+i = cbMedia_LoadRaw24bitbmp("test2.bmp")
+i2 = cbMedia_LoadRaw24BitBMP("test3.bmp")
+
+DrawImage i, 0, 0
+DrawImage i2, 30, 30
+DrawScreen
+WaitKey

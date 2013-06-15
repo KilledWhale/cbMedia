@@ -1,0 +1,139 @@
+Type files
+	Field name As String
+	Field offset As integer
+	Field size As integer
+EndType
+
+exe$ = iniReadString("config.ini", "common", "exe")
+dir$ = iniReadString("config.ini", "common", "dir")
+out$ = iniReadString("config.ini", "common", "output")
+
+If Not FileExists(exe) Then
+	Print exe + " doesn't exist!"
+	WaitKey
+	End
+EndIf
+
+If Not IsDirectory(dir) Then
+	Print dir + " doesn't exist!"
+	WaitKey
+	End
+EndIf
+
+cdir$ = CurrentDir()
+
+o = OpenToWrite(out$)
+	f = OpenToRead(exe)
+		SeekFile f, FileSize(exe) - 4
+		offset = FileSize(exe) - ReadInt(f) - 4
+		SeekFile f, 0
+		Print "Writing runtime..."
+		For i = 1 To offset / 4
+			WriteInt o, ReadInt(f)
+		Next i
+		For i = 1 To offset Mod 4
+			WriteByte o, ReadByte(f)
+		Next i
+		
+		ChDir dir$
+		
+		StartSearch
+			count = 0
+			Repeat
+				file$ = FindFile()
+				If file = "" Then
+					Exit
+				ElseIf Not IsDirectory(file)  
+					Print "Writing " + file + " ..."
+					count = count + 1
+					
+					fi.files = New(files)
+					fi\name = file$
+					fi\size = FileSize(file)
+					fi\offset = FileOffset(o)
+
+					ff = OpenToRead(file)
+						For i = 1 To fi\size / 4
+							WriteInt o, ReadInt(ff)
+						Next i
+						For i = 1 To fi\size Mod 4
+							WriteByte o, ReadByte(ff)
+						Next i
+					CloseFile ff
+				EndIf
+			Forever
+		EndSearch
+
+		ChDir cdir$
+		
+		Print "Writing file table..."
+		
+		ftoffset = FileOffset(o)
+		
+		WriteInt o, count
+		
+		For fi.files = Each files
+			WriteString o, fi\name
+			WriteInt o, fi\offset
+			WriteInt o, fi\size
+		Next fi
+		
+		WriteInt o, ftoffset
+
+		Print "Writing original exe..."
+		
+		offset = FileSize(exe) - offset
+		For i = 1 To offset / 4
+			WriteInt o, ReadInt(f)
+		Next i
+		For i = 1 To offset Mod 4
+			WriteByte o, ReadInt(f)
+		Next i
+	CloseFile f
+CloseFile o
+
+Print "Done!"
+WaitKey
+
+Function iniReadString(file As String, section As String, name As String, defaultValue As String = "")
+    Dim f As Integer
+    Dim row As String, currentSection As String
+
+    // Muunnetaan nimi ja osio pienellä kirjoitetuksi.
+    name = Lower(name)
+    section = Lower(section)
+
+    If FileExists(file) Then
+        f = OpenToRead(file)
+            While Not EOF(f)
+                row = Trim(ReadLine(f))
+
+                // Parsitaan kommentit pois.
+                If InStr(row, ";") Then
+                    row = Mid(row, 1, InStr(row, ";") - 1)
+                EndIf
+
+                If row <> "" Then
+                    If Left(row, 1) = "[" Then // Jos ON osio niin vaihdetaan nykyisen osion nimi.
+                        currentSection = Lower(Mid(row, 2, InStr(row, "]") - 2))
+                    Else // Muussa tapauksessa rivillä ON asetuksia.
+                        If Lower(Left(row, Len(name))) = name And currentSection = section Then
+                            Return Replace(Trim(Mid(row, InStr(row, "=") + 1)), Chr(34), "") // Palautetaan = -merkin jälkeen oleva osa siistittynä.
+                        EndIf
+                    EndIf
+                EndIf
+            Wend
+        CloseFile f
+    Else
+        MakeError "Tiedoston '" + file + "' avaus epäonnistui!"
+    EndIf
+    Return defaultValue
+EndFunction
+
+Function iniReadInt(file As String, section As String, name As String, defaultValue As Integer = 0)
+    Return Int(iniReadString(file, section, name, defaultvalue))
+EndFunction
+
+Function iniReadFloat(file As String, section As String, name As String, defaultValue As Float = 0.0)
+    Return Float(iniReadString(file, section, name, defaultValue))
+EndFunction
